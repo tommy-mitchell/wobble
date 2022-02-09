@@ -49,7 +49,8 @@ class ChatHeads extends React.Component {
             key={i}
             style={{
               borderRadius: 99,
-              backgroundColor: "white",
+              backgroundColor: `rgba(238, 238, 238, ${i * 0.15})`,
+              backgroundBlendMode: "color",
               width: 50,
               height: 50,
               border: "3px solid white",
