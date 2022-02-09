@@ -1,6 +1,6 @@
 'use strict'
 
-import { Spring } from "../../dist/module"
+import { Spring } from "wobble"
 
 
 class Square {
@@ -18,8 +18,8 @@ class Square {
 
     // no raf
     this.springs = {
-      x: new Spring({fromValue: this.x, raf: false}), // x
-      y: new Spring({fromValue: this.y, raf: false})  // y
+      x: new Spring({fromValue: this.x, requestAnimationFrame: false}), // x
+      y: new Spring({fromValue: this.y, requestAnimationFrame: false})  // y
     }
 
     this.springs.x.onUpdate(s => this.x = s.currentValue)
@@ -31,14 +31,12 @@ class Square {
     //this.springs.y.updateConfig({toValue: y}).start()
 
     // no raf
-    this.springs.x.setValue(x);
-    this.springs.y.setValue(y);
+    this.springs.x.setToValue(x).start()
+    this.springs.y.setToValue(y).start()
   }
   tick(now) {
-    this.springs.x._advanceSpringToTime(now, true)
-    this.springs.y._advanceSpringToTime(now, true)
-    //this.springs.x._step()
-    //this.springs.x._step()
+    this.springs.x.step(now)
+    this.springs.y.step(now)
   }
 }
 
