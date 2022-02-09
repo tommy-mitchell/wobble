@@ -77,6 +77,8 @@ export class Spring {
   /**
    * If `fromValue` differs from `toValue`, or `initialVelocity` is non-zero,
    * start the simulation and call the `onStart` listeners.
+   *
+   * If `requestAnimationFrame` is true, start the animation loop.
    */
   start(): this {
     const { fromValue, toValue, initialVelocity } = this._config;
@@ -88,12 +90,33 @@ export class Spring {
       if (!this._currentAnimationStep) {
         this._notifyListeners("onStart");
         if (this._config.requestAnimationFrame) {
-          this._currentAnimationStep = requestAnimationFrame((t: number) => {
-            this._step();
-          });
+          /**
+           * `raf` is the main loop. While the animation is running, it updates
+           * the current state once per frame, and schedules the next frame if
+           * the spring is not yet at rest.
+           */
+          const raf = () => {
+            this.step();
+
+            // Check `_isAnimating`, in case `stop()` got called during `_step()`.
+            if (this._isAnimating) {
+              this._currentAnimationStep = requestAnimationFrame(raf);
+            }
+          };
+
+          raf();
         }
       }
     }
+
+    return this;
+  }
+
+  /**
+   * Advances the simulation, using the current time if no `timestamp` is provided.
+   */
+  step(timestamp: number = Date.now()): this {
+    this._advanceSpringToTime(timestamp, true);
 
     return this;
   }
@@ -163,7 +186,7 @@ export class Spring {
     // to their current values.
 
     // Run simulation without notifying listeners.
-    this._advanceSpringToTime();
+    this._advanceSpringToTime(Date.now());
 
     this._config.fromValue = this._currentValue;
     this._config.initialVelocity = this._currentVelocity;
@@ -259,25 +282,8 @@ export class Spring {
     });
   }
 
-  /**
-   * `_step` is the main loop.  While the animation is running, it updates the
-   * current state once per frame, and schedules the next frame if the spring is
-   * not yet at rest.
-   */
-  private _step() {
-    this._advanceSpringToTime(undefined, true);
-
-    // check `_isAnimating`, in case `stop()` got called during
-    // `_advanceSpringToTime()`
-    if (this._config.requestAnimationFrame && this._isAnimating) {
-      this._currentAnimationStep = requestAnimationFrame((t: number) =>
-        this._step()
-      );
-    }
-  }
-
   private _advanceSpringToTime(
-    timestamp: number = Date.now(),
+    timestamp: number,
     shouldNotifyListeners: boolean = false
   ) {
     // `_advanceSpringToTime` updates `_currentTime` and triggers the listeners.
