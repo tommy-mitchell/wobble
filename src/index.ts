@@ -20,7 +20,7 @@ export interface SpringConfig {
   restVelocityThreshold: number; // When spring's velocity is below `restVelocityThreshold`, it is at rest. Defaults to .001.
   restDisplacementThreshold: number; // When the spring's displacement (current value) is below `restDisplacementThreshold`, it is at rest. Defaults to .001.
   requestAnimationFrame: boolean; // Whether or not the spring requests its own animation frame. Defaults to true.
-  [index: string]: any;
+  [index: string]: any; // Allow for iterative updating.
 }
 
 export type PartialSpringConfig = Partial<SpringConfig>;
@@ -151,24 +151,32 @@ export class Spring {
   }
 
   /**
-   * Updates the spring config with the given values.  Values not explicitly
+   * Updates the spring config with the given values. Values not explicitly
    * supplied will be reused from the existing config.
    */
   updateConfig(updatedConfig: PartialSpringConfig): this {
-    // When we update the spring config, we reset the simulation to ensure the
-    // spring always moves the full distance between `fromValue` and `toValue`.
-    // To ensure that the simulation behaves correctly if those values aren't
-    // being changed in `updatedConfig`, we run the simulation with `_step()`
-    // and default `fromValue` and `initialVelocity` to their current values.
+    // When we update the spring config, we reset the simulation to ensure
+    // the spring always moves the full distance between `fromValue` and
+    // `toValue`. To ensure that the simulation behaves correctly if those
+    // values aren't being changed in `updatedConfig`, we run the simulation
+    // with `_advanceSpringToTime()` and default `fromValue` and `initialVelocity`
+    // to their current values.
 
+    // Run simulation without notifying listeners.
     this._advanceSpringToTime();
 
     this._config.fromValue = this._currentValue;
     this._config.initialVelocity = this._currentVelocity;
 
-    for (const key in updatedConfig) {
-      if (this._config.hasOwnProperty(key)) {
-        this._config[key] = updatedConfig[key as keyof SpringConfig];
+    // Update config without allocating any new memory, skipping iteration
+    // if only setting the config's `toValue`.
+    if (Object.keys(updatedConfig).length === 1 && updatedConfig.toValue) {
+      this._config.toValue = updatedConfig.toValue;
+    } else {
+      for (const key in updatedConfig) {
+        if (this._config.hasOwnProperty(key)) {
+          this._config[key] = updatedConfig[key as keyof SpringConfig];
+        }
       }
     }
 
@@ -178,15 +186,10 @@ export class Spring {
   }
 
   /**
-   *
+   * Updates the spring config's `toValue` with the provided value.
    */
-  setValue(value: number): this {
-    this._config.fromValue = this._currentValue;
-    this._config.toValue = value;
-    this._config.initialVelocity = this._currentVelocity;
-    this.start();
-    this._advanceSpringToTime(undefined, true);
-    return this;
+  setToValue(value: number): this {
+    return this.updateConfig({ toValue: value });
   }
 
   /**
