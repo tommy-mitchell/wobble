@@ -191,15 +191,10 @@ export class Spring {
     this._config.fromValue = this._currentValue;
     this._config.initialVelocity = this._currentVelocity;
 
-    // Update config without allocating any new memory, skipping iteration
-    // if only setting the config's `toValue`.
-    if (Object.keys(updatedConfig).length === 1 && updatedConfig.toValue) {
-      this._config.toValue = updatedConfig.toValue;
-    } else {
-      for (const key in updatedConfig) {
-        if (this._config.hasOwnProperty(key)) {
-          this._config[key] = updatedConfig[key as keyof SpringConfig];
-        }
+    // Update config without allocating any new memory
+    for (const key in updatedConfig) {
+      if (this._config.hasOwnProperty(key)) {
+        this._config[key] = updatedConfig[key as keyof SpringConfig];
       }
     }
 
